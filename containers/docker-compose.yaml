@@ -1,0 +1,76 @@
+---
+version: "3.8"
+
+services:
+  llama-server:
+    # Latest as of 2026-11-08: "server-vulkan-b12199"
+    # image: ghcr.io/ggml-org/llama.cpp@sha256:5f372e6bbbd8ec1fd505d3094b5d9812b3caff052a9f24c52e269fe4f33cb39e
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    container_name: llama-server
+    ports:
+      - "9931:9931"
+    networks:
+      - pi-network
+    volumes:
+      - type: bind
+        source: '/home/dthor/.cache/huggingface/hub'
+        target: '/models'
+        read_only: true
+      - type: bind
+        source: '/home/dthor/dev/local-llm'
+        target: '/foo'
+        read_only: true
+      - type: bind
+        source: /home/dthor/empty_cuda
+        target: /usr/local/cuda/compat
+        read_only: true
+    command:
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "9931"
+      - "--models-dir"
+      - "/models/models--google--gemma-4-E2B-it-qat-q4_0-gguf/snapshots/675cff42a74c774d6cb76f76d8eacb49b48c9b93/"
+      - "--models-autoload"
+      - "-ngl"
+      - "99"
+    devices:
+      - "nvidia.com/gpu=all"
+    security_opt:
+      - "label=disable"
+    environment:
+      # - LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/cuda/lib64
+      # - CUDNN_FORWARD_COMPAT_DISABLE=1
+      - NVIDIA_DISABLE_REQUIRE=1
+      - LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/lib64
+    restart: unless-stopped
+
+  pi:
+    build:
+      context: .
+      dockerfile: pi.Dockerfile
+    container_name: pi
+    stdin_open: true
+    tty: true
+    networks:
+      - pi-network
+    depends_on:
+      - llama-server
+    environment:
+      - LLAMA_BASE_URL=http://llama-server:9931
+      - LLAMA_API_KEY=""
+    volumes:
+      - type: bind
+        # source: '.'
+        source: '/home/dthor/dev/local-llm'
+        target: '/workspace'
+      - type: volume
+        source: 'pi-agent-home'
+        target: '/root/.pi/agent'
+
+volumes:
+  pi-agent-home:
+
+networks:
+  pi-network:
+    driver: bridge
