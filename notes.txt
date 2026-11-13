@@ -1,0 +1,24 @@
+
+Downloading model:
+see llama/dl_model.sh
+problem: it downloads to home dir and to an annoying path:
+/home/dthor/.cache/huggingface/hub/models--google--gemma-4-E2B-it-qat-q4_0-gguf/snapshots/675cff42a74c774d6cb76f76d8eacb49b48c9b93/"
+
+activate .venv
+podman-compose up llama-server from inside containers dir
+podman-compose run --rm pi from inside containers dir
+
+or just:
+podman-compose -f containers/docker-compose.yaml run --rm pi
+
+inside pi:
+/login llama.cpp
+/model
+hello
+
+
+TODO:
+other potential harnesses:
+
+https://github.com/patriceckhart/zot
+https://github.com/charmbracelet/crush
