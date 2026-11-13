@@ -13,36 +13,44 @@ services:
       - pi-network
     volumes:
       - type: bind
-        source: '/home/dthor/.cache/huggingface/hub'
+        source: '/data/llm_models'
         target: '/models'
         read_only: true
       - type: bind
         source: '/home/dthor/dev/local-llm'
         target: '/foo'
         read_only: true
+      # Replacing /usr/local/cuda/compat within the container with an empty
+      # directory prevents CUDA version mismatches from failing to initialize
+      # CUDA.
+      # The host drivers are CUDA 12.4, the container drivers are CUDA 12.8,
+      # and my GeForce RTX 3050 cannot use the forward compatibilty layer.
+      # Without this bind mount, we get "ggml_cuda_init: failed to initialize
+      # CUDA: forward compatibilty was attmped on non-supported HW" and things
+      # would fall back to CPU rather than using the GPU.
       - type: bind
         source: /home/dthor/empty_cuda
         target: /usr/local/cuda/compat
         read_only: true
     command:
+      # Tell llama where to expose the service
       - "--host"
       - "0.0.0.0"
       - "--port"
       - "9931"
-      - "--models-dir"
-      - "/models/models--google--gemma-4-E2B-it-qat-q4_0-gguf/snapshots/675cff42a74c774d6cb76f76d8eacb49b48c9b93/"
       - "--models-autoload"
+      # Load max layers onto the GPU: "number of GPU layers"
       - "-ngl"
       - "99"
     devices:
+      # grant the container access to all GPUs on the host
       - "nvidia.com/gpu=all"
     security_opt:
+      # Needed because I'm using podman, and podman by default doesn't allow
+      # access to the GPU (something-something SELinux)
       - "label=disable"
     environment:
-      # - LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/cuda/lib64
-      # - CUDNN_FORWARD_COMPAT_DISABLE=1
-      - NVIDIA_DISABLE_REQUIRE=1
-      - LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/lib64
+      - LLAMA_CACHE=/models
     restart: unless-stopped
 
   pi:
@@ -61,7 +69,6 @@ services:
       - LLAMA_API_KEY=""
     volumes:
       - type: bind
-        # source: '.'
         source: '/home/dthor/dev/local-llm'
         target: '/workspace'
       - type: volume
