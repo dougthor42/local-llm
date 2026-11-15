@@ -8,38 +8,39 @@ model directories.
 ## Key Discussion Points & Decisions
 
 **1. Model Source of Truth & Dynamic Loading**
-*   **Initial Idea:** Models live in a single shared directory.
-*   **Decision:** The model path will be driven by the Current Working
-    Directory (CWD) from which the "start agent" script/command is executed.
-    This provides dynamic and simple model switching.
+*   **Decision:** The model paths (gguf files) will be stored in a central host
+    location. This allows the harness to access all models and select one as
+    desired, abstracting the underlying model complexity from the container.
 
 **2. Security and Scoping**
 *   **Mechanism:** Strict scoping will be enforced using **container volume
-    mounts**. This will ensure the agent container has read-only access only to
-    the specific model directory.
-*   **Host Interaction:** No host interaction is planned for the MVP, keeping
-    the design clean and focused.
+    mounts**. The primary operational workspace for any project will be
+    mounted as read-write access to a directory within the project root,
+    specifically `.agent_data/`.
 
 **3. Runtime and Dependencies**
 *   **Tooling:** `podman` and `podman-compose` are the core orchestration
     tools.
-*   **Dependencies:** External dependencies like `nvidia-container-toolkit`
+*   **Dependencies:** External dependencies (e.g., `nvidia-container-toolkit`)
     will be managed externally by the user/environment setup, keeping the
     container image focused on the LLM runtime.
 
-**4. State Persistence**
-*   **Initial State:** Ephemeral (container restarts mean start over).
-*   **Future Goal:** Persistence is a planned future feature to be addressed
-    after the MVP.
+**4. State Persistence (Hybrid Model)**
+*   **Strategy:** We are adopting a hybrid persistence model.
+    *   **Project State:** Data specific to a project (scratch files, immediate
+        outputs) will be stored within the container's workspace directory
+        (`/.agent_data/`). This data is ephemeral and tied to the project.
+    *   **Global Agent State:** Global agent state (chat histories, logs,
+        conversation IDs, cached outputs) will be stored in a persistent,
+        external host location (e.g., `~/.llm_agent_cache`), ensuring state
+        survives container restarts.
 
 **5. User Interface & Entry Point**
 *   **MVP Entry Point:** The MVP is validated by the `run.sh` script.
 *   **Future Entry Point:** A dedicated `run_agent` script on `$PATH` is
-    sufficient for the MVP but is open for alternative, more complex CLI/UI
-    designs later.
+    open for later complexity, but the MVP relies solely on `run.sh`.
 
 ## Summary of Design Philosophy
-The final design is a minimal, container-native system where the *context* (the
-CWD) dictates the *data* (the model path), and *isolation* (volume mounts)
-dictates the *security*. We prioritize portability and zero host software
-installation.
+The final design is a container-native system where the CWD dictates the
+project context (via `.agent_data/`), and container isolation ensures security
+while a dedicated external directory manages global agent state persistence.
