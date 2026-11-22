@@ -11,8 +11,10 @@ readonly C_RESET='\033[0m'
 
 VERBOSITY=2
 
+THIS_DIR="$(dirname "$(readlink --canonicalize "$0")")"
+
 readonly LLAMA_SERVER_SERVICE_NAME="llama-server"
-readonly COMPOSE_FILE="containers/docker-compose.yaml"
+readonly COMPOSE_FILE="${THIS_DIR}/containers/docker-compose.yaml"
 readonly DEFAULT_HARNESS_SERVICE_NAME="goose"
 readonly HARNESSES=(
   "goose"
@@ -21,7 +23,6 @@ readonly HARNESSES=(
 )
 CANDIDATE_HARNESS=""
 
-THIS_DIR="$(dirname "$(readlink --canonicalize "$0")")"
 VENV_NAME=".venv"
 ACTIVATE="${THIS_DIR}/${VENV_NAME}/bin/activate"
 
@@ -120,6 +121,13 @@ info "Using harness ${HARNESS}"
     --detach \
     "${LLAMA_SERVER_SERVICE_NAME}"
 
+  HOST_CWD=$(pwd)
+  export WORKSPACE_PATH="${HOST_CWD}"
+  info "Setting WORKSPACE_PATH to: ${WORKSPACE_PATH}"
+
+  EMPTY_CUDA_DIR=$(mktemp -d)
+  debug "Created dummy cuda compat dir at ${EMPTY_CUDA_DIR}"
+
   info "Starting harness container ${HARNESS}"
   podman-compose \
     --file "${COMPOSE_FILE}" \
@@ -127,3 +135,4 @@ info "Using harness ${HARNESS}"
     --rm \
     "${HARNESS}"
 )
+info "Done"

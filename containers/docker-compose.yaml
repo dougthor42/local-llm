@@ -25,7 +25,7 @@ services:
       # CUDA: forward compatibilty was attmped on non-supported HW" and things
       # would fall back to CPU rather than using the GPU.
       - type: bind
-        source: /home/dthor/empty_cuda
+        source: "${EMPTY_CUDA_DIR}"
         target: /usr/local/cuda/compat
         read_only: true
     command:
@@ -65,7 +65,7 @@ services:
       - LLAMA_API_KEY=""
     volumes:
       - type: bind
-        source: '/home/dthor/dev/local-llm'
+        source: "${WORKSPACE_PATH}"
         target: '/workspace'
       - type: volume
         source: 'pi-agent-home'
@@ -95,7 +95,7 @@ services:
       - OPENAI_API_KEY=none
     volumes:
       - type: bind
-        source: '/home/dthor/dev/local-llm'
+        source: "${WORKSPACE_PATH}"
         target: '/workspace'
       - type: volume
         source: 'goose-config'
@@ -115,7 +115,7 @@ services:
       - OPENAI_API_KEY=none
     volumes:
       - type: bind
-        source: '/home/dthor/dev/local-llm'
+        source: "${WORKSPACE_PATH}"
         target: '/app'
         read_only: false
       # - type: volume
